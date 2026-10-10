@@ -4,18 +4,42 @@
 
 界面与文档**中英双语**，默认英文，右上角按钮切换。
 
+**线上地址**：<http://staff.ustc.edu.cn/~zqj/assets/misc/EnergyUnitsConverter/>
+
 ## 部署
 
-把 **`index.html` 一个文件**上传到主页空间即可，无需任何服务器端支持（不需要 PHP/Python/数据库）：
+只需 **`index.html` 一个文件**，无需任何服务器端支持（不需要 PHP/Python/数据库），本地双击也能直接用（`file://` 下功能完全正常）。
 
-```bash
-# 例：lftp 上传
-lftp -u 用户名 ftp.example.edu -e "cd public_html; put index.html; bye"
+当前部署在个人主页的 Jekyll 站点下，源文件放在 **Jekyll 源码根目录**的 `assets/misc/EnergyUnitsConverter/index.html`：
+
+```
+jekyll-源码/
+├── _config.yml
+├── _site/                                    ← 构建产物，不要往这里放
+└── assets/misc/EnergyUnitsConverter/
+    └── index.html                            ← 放这里
 ```
 
-- 想让它成为某个目录的默认页面，保持文件名 `index.html`；想单独放一页可改名，如 `econv.html`。
-- 本地双击 `index.html` 也能直接使用（`file://` 协议下功能完全正常）。
-- `README.md`、`WIP.md`、`energy_unit_conv.py` 都不需要上传。
+更新页面后同步并重新构建：
+
+```bash
+cp index.html  <jekyll-源码>/assets/misc/EnergyUnitsConverter/
+cd <jekyll-源码> && bundle exec jekyll build
+cmp index.html _site/assets/misc/EnergyUnitsConverter/index.html   # 确认是原样拷贝
+```
+
+要点：
+
+- 文件**不能**直接放进 `_site/`，`jekyll build` 会先清空该目录。
+- `index.html` **不要加 YAML front matter**。Jekyll 只加工带 front matter 的文件，没有 front matter 的会作为静态文件原样拷贝——这正是我们要的，加了反而会被套进主题 layout 导致页面嵌套错乱。
+- 页面完全自包含（除 KaTeX 的 CDN 外没有站内相对链接），所以 `_config.yml` 的 `baseurl` 设成什么都不影响，无需改配置。
+- 在 Markdown 里引用时用 `relative_url` 过滤器，不要用 `{% link %}`——后者只能指向文件、无法指向目录：
+
+  ```liquid
+  [能量单位换算器]({{ '/assets/misc/EnergyUnitsConverter/' | relative_url }}){:target="_blank" rel="noopener"}
+  ```
+
+- `README.md`、`energy_unit_conv.py` 都不需要上传。
 
 ## 功能
 
