@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Energy Unit Converter</title>
+<meta id="metadesc" name="description" content="Instant conversion between eV, meV, Hartree, Ry, J, kJ/mol, kcal/mol, cm⁻¹, K, THz, nm and fs, with conversion formulas and CODATA constants.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css"
+      integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV"
+      crossorigin="anonymous">
+<script>
+/* 主题在首屏绘制前确定，避免深色模式下闪一下白底 */
+(function(){ try{ var t=localStorage.getItem('euc-theme'); if(t) document.documentElement.setAttribute('data-theme',t); }catch(e){} })();
+</script>
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#f5f7fa; --panel:#ffffff; --panel2:#f9fafc; --border:#e3e7ee;
+  --text:#1a1f26; --muted:#69727f; --accent:#2f6feb; --accent-weak:#e7f0fe;
+  --danger:#cf3b3b; --ok:#1a7f4b;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+          "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1216; --panel:#161b22; --panel2:#1b212a; --border:#2a313b;
+    --text:#e6eaf0; --muted:#95a0ad; --accent:#6ea0ff; --accent-weak:#1d2a44;
+    --danger:#ff7b72; --ok:#56d196;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1216; --panel:#161b22; --panel2:#1b212a; --border:#2a313b;
+  --text:#e6eaf0; --muted:#95a0ad; --accent:#6ea0ff; --accent-weak:#1d2a44;
+  --danger:#ff7b72; --ok:#56d196;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:var(--sans); font-size:16px; line-height:1.6;
+  padding:0 16px 56px;
+}
+.wrap{max-width:1080px;margin:0 auto}
+header{padding:28px 0 14px}
+h1{margin:0 0 6px; font-size:clamp(20px,4.2vw,28px); font-weight:700; letter-spacing:.2px}
+.sub{margin:0;color:var(--muted);font-size:clamp(13px,2.6vw,14.5px)}
+a{color:var(--accent)}
+a:hover{text-decoration:underline}
+
+.toolbar{
+  display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center;
+  background:var(--panel); border:1px solid var(--border); border-radius:12px;
+  padding:10px 12px; margin:14px 0 16px;
+}
+.toolbar label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+select,button{
+  font-family:inherit; font-size:14px; color:var(--text);
+  background:var(--panel2); border:1px solid var(--border); border-radius:8px;
+  padding:6px 10px; cursor:pointer;
+}
+select:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button:hover,select:hover{border-color:var(--accent)}
+.spacer{flex:1 1 auto}
+
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:10px}
+.unit{
+  background:var(--panel); border:1px solid var(--border); border-radius:12px;
+  padding:9px 11px 10px; display:flex; flex-direction:column; gap:6px;
+  transition:border-color .12s, box-shadow .12s;
+}
+.unit.active{border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-weak)}
+.unit.bad{border-color:var(--danger)}
+.uhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-height:20px}
+.sym{font-weight:650;font-size:15px;letter-spacing:.2px;flex:0 0 auto}
+.nm{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.urow{display:flex;gap:6px;align-items:stretch}
+input[type=text]{
+  flex:1 1 auto; min-width:0; width:100%;
+  font-family:var(--mono); font-size:16px; font-weight:500;
+  color:var(--text); background:var(--panel2);
+  border:1px solid var(--border); border-radius:8px; padding:7px 9px;
+}
+input[type=text]::placeholder{font-family:var(--sans);font-size:13px;color:var(--muted)}
+.unit.bad input[type=text]{color:var(--danger)}
+.cp{padding:0 9px;font-size:13px;color:var(--muted);flex:0 0 auto;white-space:nowrap}
+.cp.done{color:var(--ok);border-color:var(--ok)}
+.hint{color:var(--muted);font-size:12.5px;margin:10px 2px 0}
+
+.docs{margin-top:28px}
+.docs h2{font-size:clamp(17px,3.4vw,21px);margin:0 0 4px}
+details{
+  background:var(--panel); border:1px solid var(--border); border-radius:12px;
+  padding:0 14px; margin:10px 0;
+}
+details[open]{padding-bottom:12px}
+summary{
+  cursor:pointer; padding:11px 0; font-weight:600; font-size:15px;
+  list-style:none; display:flex; align-items:center; gap:8px;
+}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"▸";color:var(--accent);font-size:12px;transition:transform .15s}
+details[open] summary::before{transform:rotate(90deg)}
+.tbl{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:2px 0 4px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:360px}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+th{color:var(--muted);font-weight:600;font-size:12.5px;text-transform:none}
+tbody tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-family:var(--mono);font-size:13px}
+td.f{font-family:var(--mono)}
+.note{font-size:13.5px;color:var(--muted);margin:8px 0 0}
+.note strong{color:var(--text)}
+ul.notes{margin:4px 0 0;padding-left:20px;font-size:14px}
+ul.notes li{margin:5px 0}
+code{font-family:var(--mono);font-size:.92em;background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:1px 5px}
+a code{color:inherit}
+.katex{font-size:1.02em}
+footer{margin-top:26px;color:var(--muted);font-size:12.5px;border-top:1px solid var(--border);padding-top:12px}
+#st{margin:14px 0;padding:10px 14px;border-radius:12px;border:1px solid var(--border);background:var(--panel);font-family:var(--mono);font-size:12.5px;white-space:pre-wrap}
+#st.pass{border-color:var(--ok)} #st.fail{border-color:var(--danger)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1 data-i18n="h1">Energy Unit Converter</h1>
+  <p class="sub" data-i18n="sub">Type a value into any field and every other unit updates instantly. Constants are the exact SI definitions plus CODATA 2022.</p>
+</header>
+
+<div id="st" hidden></div>
+
+<div class="toolbar">
+  <label><span data-i18n="lb_sig" data-i18n-title="ti_sig" title="Significant digits">Digits</span>
+    <select id="sig">
+      <option>4</option><option>6</option><option selected>8</option><option>10</option><option>12</option>
+    </select>
+  </label>
+  <label><span data-i18n="lb_not">Notation</span>
+    <select id="notation">
+      <option value="auto" selected data-i18n="nt_auto">Auto</option>
+      <option value="plain" data-i18n="nt_plain">Plain</option>
+      <option value="sci" data-i18n="nt_sci">Scientific</option>
+    </select>
+  </label>
+  <span class="spacer"></span>
+  <button id="copyAll" type="button" data-i18n="bt_copyall">Copy all</button>
+  <button id="clear" type="button" data-i18n="bt_clear">Clear</button>
+  <button id="lang" type="button">中文</button>
+  <button id="theme" type="button" data-i18n="bt_theme" data-i18n-title="ti_theme" title="Toggle light / dark">◐ Theme</button>
+</div>
+
+<main id="grid" class="grid"></main>
+<p class="hint" data-i18n="hint">nm and fs scale as 1/<i>E</i> and are defined only for <i>E</i> &gt; 0; every other unit is proportional to the energy and accepts negative values (binding energies, energy differences). Both <code>1.5e-3</code> and Fortran-style <code>1.5d-3</code> are accepted.</p>
+
+<section class="docs">
+  <h2 data-i18n="h2">Documentation</h2>
+  <p class="note" data-i18n="docnote">Conversion formulas, the constants used, and a quick-reference table. Formula rendering: <span id="mathmode">plain text</span>.</p>
+
+  <details open>
+    <summary data-i18n="s1">1 · Conversion formulas</summary>
+    <p class="note" data-i18n="s1note">Every conversion pivots on <b>eV</b>: the input is first converted to eV, then out to all remaining units. The underlying relation is</p>
+    <p class="f" style="font-size:15px;margin:8px 0 12px"
+       data-tex="E = h\nu = \frac{hc}{\lambda} = hc\,\tilde{\nu} = k_{\rm B}T">E = hν = hc/λ = hc·ν̃ = k<sub>B</sub>T</p>
+    <div class="tbl">
+      <table id="form">
+        <thead><tr><th data-i18n="th_unit">Unit</th><th data-i18n="th_qty">Quantity</th><th data-i18n="th_from">From <i>E</i>(eV)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </details>
+
+  <details>
+    <summary data-i18n="s2">2 · Constants used</summary>
+    <p class="note" data-i18n="s2note">The values below are exactly those the page computes with — they are generated from the same code, so this documentation cannot drift away from the arithmetic. Since the 2019 SI redefinition <i>h</i>, <i>e</i>, <i>c</i>, <i>k</i><sub>B</sub> and <i>N</i><sub>A</sub> are <b>exact</b>, so every conversion factor other than those involving <i>E</i><sub>h</sub> is an exact combination of defined values.</p>
+    <div class="tbl"><table id="ctab">
+      <thead><tr><th data-i18n="th_sym">Symbol</th><th data-i18n="th_name">Name</th><th class="num" data-i18n="th_val">Value</th><th data-i18n="th_u">Unit</th><th data-i18n="th_src">Source</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="note" data-i18n="s2note2">Derived quantities (computed from the table above):</p>
+    <div class="tbl"><table id="dtab">
+      <thead><tr><th data-i18n="th_q2">Quantity</th><th class="num" data-i18n="th_val2">Value</th><th data-i18n="th_u2">Unit</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </details>
+
+  <details>
+    <summary data-i18n="s3">3 · Quick reference</summary>
+    <p class="note" data-i18n="s3note">Each row reads «one of this unit equals the value in each column». Scroll the table sideways on a narrow screen.</p>
+    <div class="tbl"><table id="ftab">
+      <thead><tr><th>1 ＝</th><th class="num">eV</th><th class="num">cm⁻¹</th><th class="num">K</th><th class="num">kJ/mol</th><th class="num">kcal/mol</th><th class="num">THz</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </details>
+
+  <details>
+    <summary data-i18n="s4">4 · Conventions and caveats</summary>
+    <ul class="notes" data-i18n="s4body">
+      <li><b>Definition of fs</b>: here fs is the oscillation <b>period</b> <span class="f" data-tex="\tau=1/\nu=h/E">τ = 1/ν = h/E</span>, so 1 eV ↔ 4.135668 fs, matching the original Python script. If you want a lifetime / decoherence time <span class="f" data-tex="\hbar/E">ħ/E</span> (1 eV ↔ 0.6582120 fs), <b>divide by 2π</b>.</li>
+      <li><b>nm and fs are inversely proportional to the energy</b> and undefined for <i>E</i> ≤ 0; those two fields are then left blank and marked «undefined».</li>
+      <li><b>kcal is the thermochemical calorie</b>: 1 cal ≡ 4.184 J (exact), not the 15 °C or IT calorie.</li>
+      <li><b>J refers to a single particle</b>; kJ/mol and kcal/mol are per mole, the two differing by <i>N</i><sub>A</sub>.</li>
+      <li><b>K is the equivalent temperature</b> <i>E</i>/<i>k</i><sub>B</sub>, with no 3/2 or other degree-of-freedom factor.</li>
+      <li><b>Hartree is the atomic unit</b> (a.u.) of energy, 1 Ha = 2 Ry.</li>
+      <li><b>Small differences from the original Python script</b>: <a href="https://github.com/QijingZheng/pyband/blob/master/energy_unit_conv.py" target="_blank" rel="noopener"><code>energy_unit_conv.py</code></a> uses pre-2018 CODATA values (<code>h = 4.13566733e-15 eV·s</code>, <code>e = 1.60217733e-19 C</code>) whereas this page uses the exact 2019 SI definitions; the two start to differ in the 8th significant digit.</li>
+      <li><b>Works offline</b>: the page needs no server-side code at all — save it and open it locally. Only the formula typesetting is enhanced by KaTeX when online; offline it falls back to plain-text formulas and the conversion itself is unaffected.</li>
+    </ul>
+  </details>
+</section>
+
+<footer data-i18n="footer">
+  A single-file static page derived from <a href="https://github.com/QijingZheng/pyband/blob/master/energy_unit_conv.py" target="_blank" rel="noopener"><code>energy_unit_conv.py</code></a> ·
+  everything is computed in your browser, nothing is uploaded ·
+  append <code>#selftest</code> to the URL to run the built-in numerical checks ·
+  a shared link carries the current input (e.g. <code>#eV=1.5</code>).
+</footer>
+
+</div>
+
+<noscript><p style="color:#cf3b3b">JavaScript must be enabled for the converter to work.</p></noscript>
+
+<script id="app">
+"use strict";
+/* 自检模式必须在任何 hash 改写之前判定 */
+var TESTMODE = /selftest/i.test(location.hash || '');
+/* ---------- 1. 常数层：只硬编码 SI 定义常数与 CODATA 的 E_h ---------- */
+var C = {
+  h:   6.62607015e-34,   // J·s     SI 精确定义值
+  e:   1.602176634e-19,  // C       SI 精确定义值
+  c:   299792458,        // m/s     SI 精确定义值
+  kB:  1.380649e-23,     // J/K     SI 精确定义值
+  NA:  6.02214076e23,    // mol^-1  SI 精确定义值
+  Eh:  27.211386245981,  // eV      CODATA 2022（唯一实验测定量）
+  cal: 4.184             // J       热化学卡，定义值
+};
+/* 派生量，全部由上面算出 */
+var D = {
+  h_eV:    C.h / C.e,                 // eV·s
+  hbar_eV: C.h / (2 * Math.PI) / C.e, // eV·s
+  kB_eV:   C.kB / C.e,                // eV/K
+  hc_eVnm: C.h * C.c / C.e * 1e9,     // eV·nm
+  cm1_eV:  C.e / (C.h * C.c * 100),   // 1 eV 对应多少 cm^-1
+  Ry:      C.Eh / 2,                  // eV
+  kJmol:   C.e * C.NA / 1000          // 1 eV 对应多少 kJ/mol
+};
+D.THz_eV   = 1 / D.h_eV / 1e12;       // 1 eV 对应多少 THz
+D.fs_eV    = D.h_eV * 1e15;           // eV·fs (周期)
+D.kcalmol  = D.kJmol / C.cal;
+D.K_eV     = 1 / D.kB_eV;
+
+/* ---------- 2. 换算层：以 eV 为中枢 ---------- */
+var UNITS = [
+  {id:'eV',      label:'eV',       name:{en:'electron volt',      zh:'电子伏特'},     inverse:false, toEv:function(x){return x;},           fromEv:function(x){return x;}},
+  {id:'meV',     label:'meV',      name:{en:'millielectron volt', zh:'毫电子伏特'},   inverse:false, toEv:function(x){return x*1e-3;},      fromEv:function(x){return x*1e3;}},
+  {id:'Ha',      label:'Hartree',  name:{en:'atomic unit (a.u.)', zh:'原子单位 a.u.'}, inverse:false, toEv:function(x){return x*C.Eh;},     fromEv:function(x){return x/C.Eh;}},
+  {id:'Ry',      label:'Ry',       name:{en:'Rydberg',            zh:'里德伯'},       inverse:false, toEv:function(x){return x*D.Ry;},      fromEv:function(x){return x/D.Ry;}},
+  {id:'J',       label:'J',        name:{en:'joule, 1 particle',  zh:'焦耳 / 粒子'},  inverse:false, toEv:function(x){return x/C.e;},       fromEv:function(x){return x*C.e;}},
+  {id:'kJmol',   label:'kJ/mol',   name:{en:'kJ per mole',        zh:'千焦每摩尔'},   inverse:false, toEv:function(x){return x/D.kJmol;},   fromEv:function(x){return x*D.kJmol;}},
+  {id:'kcalmol', label:'kcal/mol', name:{en:'kcal per mole',      zh:'千卡每摩尔'},   inverse:false, toEv:function(x){return x/D.kcalmol;}, fromEv:function(x){return x*D.kcalmol;}},
+  {id:'cm1',     label:'cm⁻¹',     name:{en:'wavenumber',         zh:'波数'},         inverse:false, toEv:function(x){return x/D.cm1_eV;},  fromEv:function(x){return x*D.cm1_eV;}},
+  {id:'K',       label:'K',        name:{en:'temperature',        zh:'等效温度'},     inverse:false, toEv:function(x){return x*D.kB_eV;},   fromEv:function(x){return x/D.kB_eV;}},
+  {id:'THz',     label:'THz',      name:{en:'frequency',          zh:'频率'},         inverse:false, toEv:function(x){return x/D.THz_eV;},  fromEv:function(x){return x*D.THz_eV;}},
+  {id:'nm',      label:'nm',       name:{en:'vacuum wavelength',  zh:'真空波长'},     inverse:true,  toEv:function(x){return D.hc_eVnm/x;}, fromEv:function(x){return D.hc_eVnm/x;}},
+  {id:'fs',      label:'fs',       name:{en:'period 1/ν',         zh:'周期 1/ν'},     inverse:true,  toEv:function(x){return D.fs_eV/x;},   fromEv:function(x){return D.fs_eV/x;}}
+];
+function U(id){ for (var i=0;i<UNITS.length;i++) if (UNITS[i].id===id) return UNITS[i]; return null; }
+
+/* 公式表第三列：TeX 与纯 HTML 回退写法（与语言无关） */
+var FORMULA = {
+  eV:      {tex:'E_{\\rm eV}',                              html:'E'},
+  meV:     {tex:'E_{\\rm meV}=10^{3}\\,E_{\\rm eV}',        html:'E<sub>meV</sub> = 10³·E'},
+  Ha:      {tex:'E_{\\rm Ha}=E_{\\rm eV}/E_{\\rm h}',       html:'E<sub>Ha</sub> = E / E<sub>h</sub>'},
+  Ry:      {tex:'E_{\\rm Ry}=2E_{\\rm eV}/E_{\\rm h}',      html:'E<sub>Ry</sub> = 2E / E<sub>h</sub>'},
+  J:       {tex:'E_{\\rm J}=e\\,E_{\\rm eV}',               html:'E<sub>J</sub> = e·E'},
+  kJmol:   {tex:'E_{\\rm kJ/mol}=e\\,N_{\\rm A}E_{\\rm eV}/1000', html:'E = e·N<sub>A</sub>·E / 1000'},
+  kcalmol: {tex:'E_{\\rm kcal/mol}=E_{\\rm kJ/mol}/4.184',  html:'E = E<sub>kJ/mol</sub> / 4.184'},
+  cm1:     {tex:'\\tilde{\\nu}=E/(hc)',                     html:'ν̃ = E / (hc)'},
+  K:       {tex:'T=E/k_{\\rm B}',                           html:'T = E / k<sub>B</sub>'},
+  THz:     {tex:'\\nu=E/h',                                 html:'ν = E / h'},
+  nm:      {tex:'\\lambda=hc/E',                            html:'λ = hc / E'},
+  fs:      {tex:'\\tau=1/\\nu=h/E',                         html:'τ = 1/ν = h / E'}
+};
+
+/* 由 eV 值取某单位的数值；无定义时返回 null */
+function valueIn(u, ev){
+  if (ev === null || !isFinite(ev)) return null;
+  if (u.inverse && !(ev > 0)) return null;
+  var v = u.fromEv(ev);
+  return isFinite(v) ? v : null;
+}
+
+/* ---------- 3. 数值格式化（与语言无关） ---------- */
+var state = { sig:8, notation:'auto', ev:null, srcId:null };
+
+function expandExp(s){
+  var m = /^(-?)(\d+)(?:\.(\d+))?[eE]([+-]?\d+)$/.exec(s);
+  if (!m) return s;
+  var sign=m[1], ip=m[2], fp=m[3]||'', ex=parseInt(m[4],10);
+  var digits = ip + fp, point = ip.length + ex, out;
+  if (point <= 0)                 out = '0.' + new Array(-point+1).join('0') + digits;
+  else if (point >= digits.length) out = digits + new Array(point-digits.length+1).join('0');
+  else                             out = digits.slice(0,point) + '.' + digits.slice(point);
+  return sign + out;
+}
+function fmt(x){
+  if (x === null || x === undefined || !isFinite(x)) return '';
+  if (x === 0) return '0';
+  var sig = state.sig, a = Math.abs(x), useExp;
+  if (state.notation === 'sci') useExp = true;
+  else if (state.notation === 'plain') useExp = false;
+  else useExp = (a < 1e-4 || a >= 1e9);
+  if (useExp){
+    return x.toExponential(sig-1).replace(/\.?0+e/, 'e');
+  }
+  var s = x.toPrecision(sig);
+  if (s.indexOf('e') >= 0 || s.indexOf('E') >= 0) s = expandExp(s);
+  if (s.indexOf('.') >= 0) s = s.replace(/0+$/,'').replace(/\.$/,'');
+  return s;
+}
+/* 文档表格用的漂亮指数：1.602...e-19 -> 1.602…×10⁻¹⁹ */
+var SUP = {'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','-':'⁻'};
+function pretty(x, digits){
+  var a = Math.abs(x), s;
+  if (a !== 0 && (a < 1e-3 || a >= 1e7)) s = (digits ? x.toExponential(digits-1) : x.toExponential());
+  else s = (digits ? x.toPrecision(digits) : String(x));
+  if (s.indexOf('e') < 0){
+    if (s.indexOf('.') >= 0) s = s.replace(/0+$/,'').replace(/\.$/,'');
+    return s;
+  }
+  var p = s.split('e'), mant = p[0].replace(/\.?0+$/,''), ex = p[1].replace('+','');
+  var sup = ''; for (var i=0;i<ex.length;i++) sup += (SUP[ex[i]] || ex[i]);
+  return mant + '×10' + sup;
+}
+/* 输入解析：'' -> null，非法 -> NaN */
+function parseVal(str){
+  var v = String(str).trim().replace(/\s+/g,'').replace(/[×x]10\^?/, 'e');
+  if (v === '') return null;
+  if (!/^[+-]?(\d+\.?\d*|\.\d+)([eEdD][+-]?\d+)?$/.test(v)) return NaN;
+  return parseFloat(v.replace(/[dD]/,'e'));
+}
+
+/* ---------- 4. 双语：英文原文从 DOM 采集，只手写中文 ---------- */
+var LANG = 'en';
+var STR = {
+  en: {},   /* 启动时由 [data-i18n] 的英文原文填充，英文只写一遍 */
+  zh: {
+    title:   '能量单位换算器',
+    metadesc:'eV / meV / Hartree / Ry / J / kJ·mol⁻¹ / kcal·mol⁻¹ / cm⁻¹ / K / THz / nm / fs 之间的实时能量单位换算，附换算公式与 CODATA 常数。',
+    h1:      '能量单位换算器',
+    sub:     '在任意一栏输入数值，其余各栏实时换算。常数取 SI 精确定义值与 CODATA 2022。',
+    lb_sig:  '有效数字',
+    ti_sig:  '结果保留的有效数字位数',
+    lb_not:  '记数法',
+    nt_auto: '自动', nt_plain:'普通', nt_sci:'科学记数法',
+    bt_copyall:'复制全部', bt_clear:'清空',
+    bt_theme:'◐ 主题', ti_theme:'切换浅色 / 深色',
+    hint:    'nm 与 fs 按 1/<i>E</i> 换算，仅对 <i>E</i> &gt; 0 有定义；其余单位与能量成正比，可输入负值（结合能、能量差）。支持 <code>1.5e-3</code> 与 Fortran 风格 <code>1.5d-3</code>。',
+    h2:      '文档',
+    docnote: '换算公式、常数取值与速查表。公式渲染：<span id="mathmode">纯文本</span>。',
+    s1:      '一、换算公式',
+    s1note:  '所有换算都以 <b>eV</b> 为中枢：先把输入量折算成 eV，再折算到其余单位。基本关系为',
+    th_unit: '单位', th_qty:'物理量', th_from:'由 <i>E</i>(eV) 得到',
+    s2:      '二、所用常数',
+    s2note:  '下表数值即页面计算实际使用的值（由同一份代码生成，不会与计算逻辑脱节）。自 2019 年 SI 重新定义起，<i>h</i>、<i>e</i>、<i>c</i>、<i>k</i><sub>B</sub>、<i>N</i><sub>A</sub> 均为<b>精确值</b>，故除 <i>E</i><sub>h</sub> 外所有换算因子都是精确的有理/定义组合。',
+    th_sym:  '符号', th_name:'名称', th_val:'数值', th_u:'单位', th_src:'来源',
+    s2note2: '派生量（由上表算得）：',
+    th_q2:   '量', th_val2:'数值', th_u2:'单位',
+    s3:      '三、常用换算因子速查',
+    s3note:  '每行读作「1 个该单位 等于 各列的数值」。窄屏可左右滑动表格。',
+    s4:      '四、约定与注意事项',
+    s4body:
+      '<li><b>fs 的定义</b>：本页 fs 为振动<b>周期</b> <span class="f" data-tex="\\tau=1/\\nu=h/E">τ = 1/ν = h/E</span>，1 eV ↔ 4.135668 fs，与原 Python 脚本一致。若需要寿命 / 退相干时间 <span class="f" data-tex="\\hbar/E">ħ/E</span>（1 eV ↔ 0.6582120 fs），把本页数值<b>除以 2π</b> 即可。</li>' +
+      '<li><b>nm 与 fs 和能量成反比</b>，对 <i>E</i> ≤ 0 无定义，此时该栏留空并提示「无定义」。</li>' +
+      '<li><b>kcal 为热化学卡</b>：1 cal ≡ 4.184 J（定义值），非 15 ℃ 卡或 IT 卡。</li>' +
+      '<li><b>J 对应单个粒子</b>的能量；kJ/mol、kcal/mol 对应每摩尔，二者相差 <i>N</i><sub>A</sub>。</li>' +
+      '<li><b>K 为等效温度</b> <i>E</i>/<i>k</i><sub>B</sub>，不含 3/2 等自由度因子。</li>' +
+      '<li><b>Hartree 即原子单位</b>（a.u.）能量，1 Ha = 2 Ry。</li>' +
+      '<li><b>与原 Python 脚本的细微差异</b>：<a href="https://github.com/QijingZheng/pyband/blob/master/energy_unit_conv.py" target="_blank" rel="noopener"><code>energy_unit_conv.py</code></a> 用的是 2018 年以前的 CODATA 值（<code>h = 4.13566733e-15 eV·s</code>、<code>e = 1.60217733e-19 C</code>），本页用 2019 年 SI 精确定义值，两者在第 8 位有效数字起有差别。</li>' +
+      '<li><b>离线可用</b>：页面不依赖任何服务器脚本，整页保存到本地双击即可使用；仅公式排版会在联网时由 KaTeX 美化，断网则退回纯文本公式，换算功能不受影响。</li>',
+    footer:
+      '由 <a href="https://github.com/QijingZheng/pyband/blob/master/energy_unit_conv.py" target="_blank" rel="noopener"><code>energy_unit_conv.py</code></a> 改写而成的单文件静态页面 · ' +
+      '纯前端计算，不上传任何数据 · 在地址栏追加 <code>#selftest</code> 可运行内置数值自检 · ' +
+      '分享链接会带上当前输入（如 <code>#eV=1.5</code>）。',
+    /* 以下为 JS 动态生成的串 */
+    undef:   '无定义（E ≤ 0）',
+    copy:    '复制', copied:'已复制', ti_copy:'复制该数值',
+    copyhead:'能量换算', copyin:'输入：',
+    plaintext:'纯文本',
+    ti_lang: '切换到英文 / Switch to English',
+    c_planck:'Planck 常数', c_echarge:'基本电荷', c_light:'真空光速',
+    c_boltz: 'Boltzmann 常数', c_avog:'Avogadro 常数', c_hartree:'Hartree 能量', c_cal:'热化学卡',
+    src_si:  'SI 精确定义值', src_def:'定义值',
+    st_pass: '自检通过', st_fail:'自检失败', st_items:' 项',
+    st_got:  '得到 ', st_exp:'，期望 ',
+    st_rt:   '往返 ', st_hbar:'ħ/E 关系：fs×2π', st_undef:'E ≤ 0 时 nm 无定义'
+  }
+};
+function t(k){ var s = STR[LANG] && STR[LANG][k]; return (s == null) ? STR.en[k] : s; }
+
+/* 采集英文原文，必须在 KaTeX 渲染之前，否则抓到的是渲染后的标记 */
+(function captureEn(){
+  var n = document.querySelectorAll('[data-i18n]');
+  for (var i=0;i<n.length;i++) STR.en[n[i].getAttribute('data-i18n')] = n[i].innerHTML;
+  var a = document.querySelectorAll('[data-i18n-title]');
+  for (var j=0;j<a.length;j++) STR.en[a[j].getAttribute('data-i18n-title')] = a[j].getAttribute('title');
+  STR.en.title     = document.title;
+  STR.en.metadesc  = document.getElementById('metadesc').getAttribute('content');
+  STR.en.undef     = 'undefined (E ≤ 0)';
+  STR.en.copy      = 'Copy';  STR.en.copied = 'Copied';  STR.en.ti_copy = 'Copy this value';
+  STR.en.copyhead  = 'Energy conversion'; STR.en.copyin = 'input: ';
+  STR.en.plaintext = 'plain text';
+  STR.en.ti_lang   = '切换到中文 / Switch to Chinese';
+  STR.en.c_planck  = 'Planck constant';   STR.en.c_echarge = 'elementary charge';
+  STR.en.c_light   = 'speed of light';    STR.en.c_boltz   = 'Boltzmann constant';
+  STR.en.c_avog    = 'Avogadro constant'; STR.en.c_hartree = 'Hartree energy';
+  STR.en.c_cal     = 'thermochemical calorie';
+  STR.en.src_si    = 'exact (SI definition)'; STR.en.src_def = 'exact (by definition)';
+  STR.en.st_pass   = 'checks passed';  STR.en.st_fail = 'checks failed';  STR.en.st_items = '';
+  STR.en.st_got    = 'got ';           STR.en.st_exp  = ', expected ';
+  STR.en.st_rt     = 'roundtrip ';     STR.en.st_hbar = 'ħ/E relation: fs×2π';
+  STR.en.st_undef  = 'nm undefined for E ≤ 0';
+})();
+
+var MATH_OK = false;   /* KaTeX 是否渲染成功，用于「公式渲染：…」的提示 */
+
+function applyLang(lang){
+  LANG = (lang === 'zh') ? 'zh' : 'en';
+  /* 1. 静态文案与 title 属性 */
+  var n = document.querySelectorAll('[data-i18n]');
+  for (var i=0;i<n.length;i++) n[i].innerHTML = t(n[i].getAttribute('data-i18n'));
+  var a = document.querySelectorAll('[data-i18n-title]');
+  for (var j=0;j<a.length;j++) a[j].setAttribute('title', t(a[j].getAttribute('data-i18n-title')));
+  /* 2. 文档级元数据 */
+  document.documentElement.lang = (LANG === 'zh') ? 'zh-CN' : 'en';
+  document.title = t('title');
+  document.getElementById('metadesc').setAttribute('content', t('metadesc'));
+  /* 3. 语言按钮自身 + 单位卡片的名称 + 复制按钮 */
+  var lb = document.getElementById('lang');
+  lb.textContent = (LANG === 'zh') ? 'EN' : '中文';
+  lb.title = t('ti_lang');
+  UNITS.forEach(function(u){
+    names[u.id].textContent = u.name[LANG];
+    inputs[u.id].setAttribute('aria-label', u.label + ' — ' + u.name[LANG]);
+    copyBtns[u.id].textContent = t('copy');
+    copyBtns[u.id].title = t('ti_copy');
+  });
+  /* 4. 三张文档表格（常数名、来源列、公式表的物理量列） */
+  fillTables();
+  /* 5. 输入框的 placeholder（无定义提示）随语言走 */
+  if (state.ev === null) UNITS.forEach(function(u){ inputs[u.id].placeholder = ''; });
+  else rerender();
+  /* 6. 公式区换过 innerHTML，已渲染的 KaTeX 被抹掉，必须重渲染 */
+  renderMath();
+  setMathMode();
+  /* 7. 自检面板若开着则按新语言重跑 */
+  if (TESTMODE) selfTest();
+  try { localStorage.setItem('euc-lang', LANG); } catch(err){}
+}
+function setMathMode(){
+  var el = document.getElementById('mathmode');
+  if (el) el.textContent = MATH_OK ? 'KaTeX' : t('plaintext');
+}
+
+/* ---------- 5. 界面构建 ---------- */
+var inputs = {}, cards = {}, names = {}, copyBtns = {};
+(function build(){
+  var grid = document.getElementById('grid'), frag = document.createDocumentFragment();
+  UNITS.forEach(function(u){
+    var card = document.createElement('div'); card.className = 'unit';
+    var head = document.createElement('div'); head.className = 'uhead';
+    var sym = document.createElement('span'); sym.className = 'sym'; sym.textContent = u.label;
+    var nm  = document.createElement('span'); nm.className = 'nm';  nm.textContent = u.name.en;
+    head.appendChild(sym); head.appendChild(nm);
+    var row = document.createElement('div'); row.className = 'urow';
+    var inp = document.createElement('input');
+    inp.type='text'; inp.id='in-'+u.id; inp.inputMode='decimal';
+    inp.autocomplete='off'; inp.autocapitalize='off'; inp.spellcheck=false;
+    inp.setAttribute('aria-label', u.label);
+    var cp = document.createElement('button');
+    cp.type='button'; cp.className='cp'; cp.textContent='Copy';
+    row.appendChild(inp); row.appendChild(cp);
+    card.appendChild(head); card.appendChild(row);
+    frag.appendChild(card);
+    inputs[u.id] = inp; cards[u.id] = card; names[u.id] = nm; copyBtns[u.id] = cp;
+
+    inp.addEventListener('input', function(){ onInput(u); });
+    inp.addEventListener('focus', function(){ setActive(u.id); });
+    cp.addEventListener('click', function(){ copyText(inp.value, cp); });
+  });
+  grid.appendChild(frag);
+})();
+
+function setActive(id){
+  UNITS.forEach(function(u){ cards[u.id].classList.toggle('active', u.id === id); });
+}
+function onInput(u){
+  var raw = parseVal(inputs[u.id].value);
+  cards[u.id].classList.remove('bad');
+  if (raw === null){ state.ev = null; state.srcId = null; render(u.id); writeHash(); return; }
+  if (isNaN(raw)){ cards[u.id].classList.add('bad'); return; }
+  var ev = u.toEv(raw);
+  if (!isFinite(ev)){ cards[u.id].classList.add('bad'); return; }
+  state.ev = ev; state.srcId = u.id;
+  setActive(u.id); render(u.id); writeHash();
+}
+/* 刷新除 skipId 外的所有输入框 */
+function render(skipId){
+  UNITS.forEach(function(u){
+    if (u.id === skipId) return;
+    var inp = inputs[u.id];
+    cards[u.id].classList.remove('bad');
+    if (state.ev === null){ inp.value = ''; inp.placeholder = ''; return; }
+    var v = valueIn(u, state.ev);
+    if (v === null){ inp.value = ''; inp.placeholder = t('undef'); }
+    else { inp.value = fmt(v); inp.placeholder = ''; }
+  });
+}
+/* 重排当前所有数值（改精度/记数法/语言时用） */
+function rerender(){
+  if (state.ev === null) return;
+  UNITS.forEach(function(u){
+    var v = valueIn(u, state.ev);
+    inputs[u.id].value = (v === null) ? '' : fmt(v);
+    inputs[u.id].placeholder = (v === null) ? t('undef') : '';
+  });
+}
+
+/* ---------- 6. 工具栏 ---------- */
+document.getElementById('sig').addEventListener('change', function(e){
+  state.sig = parseInt(e.target.value,10); rerender(); fillTables(); renderMath();
+});
+document.getElementById('notation').addEventListener('change', function(e){
+  state.notation = e.target.value; rerender();
+});
+document.getElementById('clear').addEventListener('click', function(){
+  state.ev = null; state.srcId = null;
+  UNITS.forEach(function(u){ inputs[u.id].value=''; inputs[u.id].placeholder=''; cards[u.id].classList.remove('bad','active'); });
+  if (history.replaceState) history.replaceState(null,'',location.pathname+location.search);
+});
+document.getElementById('copyAll').addEventListener('click', function(){
+  var head = t('copyhead');
+  if (state.srcId){
+    var br = (LANG === 'zh') ? ['（', '）'] : [' (', ')'];
+    head += br[0] + t('copyin') + inputs[state.srcId].value + ' ' + U(state.srcId).label + br[1];
+  }
+  var lines = [head];
+  UNITS.forEach(function(u){
+    var pad = u.label + new Array(Math.max(1, 10 - u.label.length)).join(' ');
+    lines.push(pad + ' = ' + (inputs[u.id].value || '—'));
+  });
+  copyText(lines.join('\n'), this);
+});
+document.getElementById('lang').addEventListener('click', function(){
+  applyLang(LANG === 'zh' ? 'en' : 'zh');
+});
+document.getElementById('theme').addEventListener('click', function(){
+  var cur = document.documentElement.getAttribute('data-theme');
+  var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var next = cur ? (cur === 'dark' ? 'light' : 'dark') : (dark ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', next);
+  try { localStorage.setItem('euc-theme', next); } catch(err){}
+});
+
+function copyText(txt, btn){
+  if (!txt) return;
+  var done = function(){
+    if (!btn) return;
+    var old = btn.textContent; btn.textContent = t('copied'); btn.classList.add('done');
+    setTimeout(function(){ btn.textContent = old; btn.classList.remove('done'); }, 1200);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done, function(){ legacyCopy(txt, done); });
+  } else legacyCopy(txt, done);
+}
+function legacyCopy(txt, done){
+  var ta = document.createElement('textarea');
+  ta.value = txt; ta.setAttribute('readonly','');
+  ta.style.position='fixed'; ta.style.top='-1000px';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); done(); } catch(err){}
+  document.body.removeChild(ta);
+}
+
+/* ---------- 7. 分享链接 #eV=1.5 ---------- */
+function writeHash(){
+  if (TESTMODE || !history.replaceState) return;   // 自检模式下保留 #selftest，刷新可重跑
+  if (state.srcId === null){ history.replaceState(null,'',location.pathname+location.search); return; }
+  history.replaceState(null, '', '#' + state.srcId + '=' + encodeURIComponent(inputs[state.srcId].value));
+}
+function readHash(){
+  var h = decodeURIComponent((location.hash || '').replace(/^#/,''));
+  var m = /^([A-Za-z0-9]+)=(.+)$/.exec(h);
+  if (!m) return false;
+  var u = U(m[1]); if (!u) return false;
+  inputs[u.id].value = m[2];
+  onInput(u);
+  return true;
+}
+
+/* ---------- 8. 文档表格（与计算共用同一组常数） ---------- */
+function fillTables(){
+  /* 公式表：单位 / 物理量（随语言）/ 公式 */
+  var tb0 = document.querySelector('#form tbody'); tb0.innerHTML = '';
+  UNITS.forEach(function(u){
+    var f = FORMULA[u.id], tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + u.label + '</td><td>' + u.name[LANG] + '</td>' +
+                   '<td class="f"><span data-tex="' + f.tex + '">' + f.html + '</span></td>';
+    tb0.appendChild(tr);
+  });
+
+  var crows = [
+    ['h',  t('c_planck'),  pretty(C.h),  'J·s',    t('src_si')],
+    ['e',  t('c_echarge'), pretty(C.e),  'C',      t('src_si')],
+    ['c',  t('c_light'),   '299 792 458','m·s⁻¹',  t('src_si')],
+    ['k<sub>B</sub>', t('c_boltz'), pretty(C.kB), 'J·K⁻¹', t('src_si')],
+    ['N<sub>A</sub>', t('c_avog'),  pretty(C.NA), 'mol⁻¹', t('src_si')],
+    ['E<sub>h</sub>', t('c_hartree'), '27.211 386 245 981', 'eV', 'CODATA 2022'],
+    ['cal', t('c_cal'),    '4.184',      'J',      t('src_def')]
+  ];
+  var tb = document.querySelector('#ctab tbody'); tb.innerHTML = '';
+  crows.forEach(function(r){
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="f">'+r[0]+'</td><td>'+r[1]+'</td><td class="num">'+r[2]+'</td><td>'+r[3]+'</td><td>'+r[4]+'</td>';
+    tb.appendChild(tr);
+  });
+
+  var drows = [
+    ['h',        pretty(D.h_eV, 10),    'eV·s'],
+    ['ħ = h/2π', pretty(D.hbar_eV, 10), 'eV·s'],
+    ['k<sub>B</sub>', pretty(D.kB_eV, 10), 'eV·K⁻¹'],
+    ['hc',       pretty(D.hc_eVnm, 10), 'eV·nm'],
+    ['E<sub>h</sub>/2 = 1 Ry', pretty(D.Ry, 12), 'eV'],
+    ['1 eV / hc',  pretty(D.cm1_eV, 10),  'cm⁻¹'],
+    ['1 eV / k<sub>B</sub>', pretty(D.K_eV, 10), 'K'],
+    ['1 eV · N<sub>A</sub>', pretty(D.kJmol, 10), 'kJ·mol⁻¹']
+  ];
+  var tb2 = document.querySelector('#dtab tbody'); tb2.innerHTML = '';
+  drows.forEach(function(r){
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="f">'+r[0]+'</td><td class="num">'+r[1]+'</td><td>'+r[2]+'</td>';
+    tb2.appendChild(tr);
+  });
+
+  var cols = ['eV','cm1','K','kJmol','kcalmol','THz'];
+  var tb3 = document.querySelector('#ftab tbody'); tb3.innerHTML = '';
+  UNITS.forEach(function(u){
+    var ev = u.toEv(1), tr = document.createElement('tr');
+    var cells = '<td class="f">' + u.label + '</td>';
+    cols.forEach(function(cid){
+      var v = valueIn(U(cid), ev);
+      cells += '<td class="num">' + (v === null ? '—' : pretty(v, Math.min(state.sig, 9))) + '</td>';
+    });
+    tr.innerHTML = cells; tb3.appendChild(tr);
+  });
+}
+
+/* ---------- 9. KaTeX 渐进增强（失败则保留 HTML 公式） ---------- */
+function renderMath(){
+  try {
+    if (typeof katex === 'undefined') return;
+    var nodes = document.querySelectorAll('[data-tex]'), ok = 0;
+    for (var i=0;i<nodes.length;i++){
+      try { katex.render(nodes[i].getAttribute('data-tex'), nodes[i], {throwOnError:false, displayMode:false}); ok++; }
+      catch(err){ /* 该条保留原 HTML */ }
+    }
+    if (ok){ MATH_OK = true; setMathMode(); }
+  } catch(err){}
+}
+function mathFailed(){ /* CDN 不可达：什么都不做，HTML 版公式已在页面上 */ }
+
+/* ---------- 10. 内置自检 #selftest ---------- */
+function selfTest(){
+  var T = [], tol = 1e-7;
+  function chk(name, got, want, tl){
+    var ok = (want === 0) ? (got === 0) : (Math.abs(got - want) / Math.abs(want) < (tl || tol));
+    T.push({n:name, g:got, w:want, ok:ok});
+  }
+  chk('1 eV → cm⁻¹',     U('cm1').fromEv(1),     8065.543937);
+  chk('1 eV → K',        U('K').fromEv(1),       11604.51812);
+  chk('1 eV → kJ/mol',   U('kJmol').fromEv(1),   96.48533212);
+  chk('1 eV → kcal/mol', U('kcalmol').fromEv(1), 23.060548);
+  chk('1 eV → THz',      U('THz').fromEv(1),     241.7989242);
+  chk('1 eV → nm',       U('nm').fromEv(1),      1239.841984);
+  chk('1 eV → fs',       U('fs').fromEv(1),      4.135667696);
+  chk('1 eV → J',        U('J').fromEv(1),       1.602176634e-19);
+  chk('1 eV → meV',      U('meV').fromEv(1),     1000);
+  chk('1 Ha → eV',       U('Ha').toEv(1),        27.211386245981, 1e-12);
+  chk('1 Ha → cm⁻¹',     U('cm1').fromEv(U('Ha').toEv(1)), 219474.6313632);
+  chk('1 Ha → K',        U('K').fromEv(U('Ha').toEv(1)),   315775.02480398);
+  chk('1 Ha → kJ/mol',   U('kJmol').fromEv(U('Ha').toEv(1)), 2625.4996394799);
+  chk('1 Ha → kcal/mol', U('kcalmol').fromEv(U('Ha').toEv(1)), 627.5094740631);
+  chk('1 Ry → eV',       U('Ry').toEv(1),        13.605693122990, 1e-12);
+  chk('1 cm⁻¹ → K',      U('K').fromEv(U('cm1').toEv(1)), 1.4387768776);
+  chk(t('st_hbar'),      U('fs').fromEv(1)/(2*Math.PI), 0.6582119569);
+  UNITS.forEach(function(u){
+    var x = 3.7, back = u.fromEv(u.toEv(x));
+    chk(t('st_rt') + u.label, back, x, 1e-12);
+  });
+  T.push({n:t('st_undef'), g:valueIn(U('nm'), -1), w:null, ok:(valueIn(U('nm'),-1) === null && valueIn(U('fs'),0) === null)});
+
+  var bad = T.filter(function(r){ return !r.ok; });
+  var el = document.getElementById('st');
+  el.hidden = false;
+  el.className = bad.length ? 'fail' : 'pass';
+  var head = bad.length
+    ? '✗ ' + (LANG==='zh' ? t('st_fail') + '：' + bad.length + '/' + T.length + t('st_items')
+                          : bad.length + '/' + T.length + ' ' + t('st_fail'))
+    : '✓ ' + (LANG==='zh' ? t('st_pass') + '：' + T.length + '/' + T.length + t('st_items')
+                          : 'all ' + T.length + ' ' + t('st_pass'));
+  var lines = [head];
+  T.forEach(function(r){
+    lines.push((r.ok ? '  ok   ' : '  FAIL ') + r.n +
+      (r.ok ? '' : '  ' + t('st_got') + r.g + t('st_exp') + r.w));
+  });
+  el.textContent = lines.join('\n');
+}
+
+/* ---------- 11. 启动 ---------- */
+(function initLang(){
+  var saved = null;
+  try { saved = localStorage.getItem('euc-lang'); } catch(err){}
+  applyLang(saved === 'zh' ? 'zh' : 'en');   // 没存过一律英文
+})();
+if (!readHash()){ inputs.eV.value = '1'; onInput(U('eV')); }
+if (TESTMODE) selfTest();
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"
+        integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8"
+        crossorigin="anonymous" onload="renderMath()" onerror="mathFailed()"></script>
+</body>
+</html>

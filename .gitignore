@@ -1,0 +1,13 @@
+# 工作进度草稿，不入库
+WIP.md
+
+# 编辑器 / 系统
+.DS_Store
+*.swp
+*~
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
